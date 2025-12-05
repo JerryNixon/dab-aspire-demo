@@ -1,0 +1,6 @@
+{
+  "appHostPath": "../AppHost/AppHost.csproj",
+  "features": {
+    "singlefileAppHostEnabled": "true"
+  }
+}

@@ -1,0 +1,335 @@
+﻿@page
+@using Web
+@model Web.Pages.IndexModel
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tasks</title>
+    <link rel="stylesheet" href="/css/index.css" />
+</head>
+<body>
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="error">@Model.ErrorMessage</div>
+    }
+
+    <div class="container-card">
+        <header class="page-header">
+            <div>
+                <h1>Tasks</h1>
+            </div>
+        </header>
+
+        <div class="add-form">
+            <form method="post" class="add-form-content">
+                @Html.AntiForgeryToken()
+                <input class="input" type="text" name="title" placeholder="Add a new task..." required autofocus />
+                <select class="select" name="categoryId" aria-label="Category" required>
+                    <option value="">Select category...</option>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
+                <button type="submit" name="action" value="Create" class="btn btn-primary">Add</button>
+            </form>
+        </div>
+
+        <h2 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:8px 0 10px 0">Pending (@Model.PendingTodos.Length)</h2>
+        @if (Model.PendingTodos.Any())
+        {
+            <div class="list">
+                @foreach (var todo in Model.PendingTodos)
+                {
+                    var formId = $"todo-form-{todo.Id}";
+                    var categoryName = Model.CategoryLookup.TryGetValue(todo.CategoryId, out var lookupName) ? lookupName : "Unassigned";
+                    <div class="item">
+                        <form method="post" id="@formId" class="item-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@todo.Id" />
+                            <input type="hidden" name="title" value="@todo.Title" />
+                            <input type="hidden" name="isCompleted" value="@(todo.IsCompleted.ToString().ToLower())" />
+                            <input type="hidden" name="categoryId" value="@todo.CategoryId" />
+                            <input type="hidden" name="action" value="" />
+                            <div class="left">
+                                <input type="checkbox" class="toggle-box" aria-label="Toggle completion" @(todo.IsCompleted ? "checked" : "") />
+                                <div class="details">
+                                    @if (Model.EditingId == todo.Id)
+                                    {
+                                        <input type="text" name="title" value="@todo.Title" required class="edit-input" autofocus />
+                                        <select name="categoryId" class="edit-select">
+                                            @foreach (var category in Model.Categories)
+                                            {
+                                                <option value="@category.Id" selected="@(category.Id == todo.CategoryId)">@category.Name</option>
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <div class="title">@todo.Title</div>
+                                        <div class="meta">
+                                            <span class="muted">#@todo.Id</span>
+                                            <span class="category-pill">@categoryName</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="actions">
+                                @if (Model.EditingId == todo.Id)
+                                {
+                                    <a href="#" class="action-link" data-action="Update" title="Save" aria-label="Save">✓</a>
+                                    <a href="#" class="action-link" data-action="CancelEdit" title="Cancel" aria-label="Cancel">✖</a>
+                                }
+                                else
+                                {
+                                    <a href="#" class="action-link" data-action="Edit" title="Edit" aria-label="Edit">✏️</a>
+                                    <a href="#" class="action-link" data-action="Delete" title="Delete" aria-label="Delete" onclick="return confirm('Delete this task?')">🗑️</a>
+                                }
+                            </div>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p><em>No tasks yet. Add one above!</em></p>
+        }
+
+        <h2 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:22px 0 10px 0">Completed (@Model.CompletedTodos.Length)</h2>
+        @if (Model.CompletedTodos.Any())
+        {
+            <div class="list">
+                @foreach (var todo in Model.CompletedTodos)
+                {
+                    var formId = $"todo-form-{todo.Id}";
+                    var categoryName = Model.CategoryLookup.TryGetValue(todo.CategoryId, out var lookupName) ? lookupName : "Unassigned";
+                    <div class="item">
+                        <form method="post" id="@formId" class="item-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@todo.Id" />
+                            <input type="hidden" name="title" value="@todo.Title" />
+                            <input type="hidden" name="isCompleted" value="@(todo.IsCompleted.ToString().ToLower())" />
+                            <input type="hidden" name="categoryId" value="@todo.CategoryId" />
+                            <input type="hidden" name="action" value="" />
+                            <div class="left">
+                                <input type="checkbox" class="toggle-box" aria-label="Toggle completion" @(todo.IsCompleted ? "checked" : "") />
+                                <div class="details">
+                                    <div class="title completed">@todo.Title</div>
+                                    <div class="meta">
+                                        <span class="muted">#@todo.Id</span>
+                                        <span class="category-pill">@categoryName</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="actions">
+                                <a href="#" class="action-link" data-action="Delete" title="Delete" aria-label="Delete" onclick="return confirm('Delete this task?')">🗑️</a>
+                            </div>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p><em>Nothing completed yet.</em></p>
+        }
+    </div>
+
+    <script>
+        document.addEventListener('click', function (e) {
+            if (e.target.matches('.action-link')) {
+                e.preventDefault();
+                const link = e.target;
+                const form = link.closest('form');
+                if (!form) return;
+                form.querySelector('input[name=action]').value = link.dataset.action;
+                form.submit();
+            }
+        });
+        const pendingSubmissions = new Set();
+        
+        document.addEventListener('change', function (e) {
+            if (e.target.matches('.toggle-box')) {
+                const cb = e.target;
+                const form = cb.closest('form');
+                if (!form) return;
+                
+                const todoId = form.querySelector('input[name=id]')?.value;
+                if (!todoId) return;
+                
+                if (pendingSubmissions.has(todoId)) {
+                    console.log('Submission already pending for todo', todoId);
+                    e.preventDefault();
+                    cb.checked = !cb.checked;
+                    return;
+                }
+                
+                pendingSubmissions.add(todoId);
+                cb.disabled = true;
+                
+                form.querySelector('input[name=action]').value = 'Toggle';
+                form.submit();
+            }
+        });
+    </script>
+
+    <div id="chat-widget" class="chat-widget">
+        <button id="chat-toggle" class="chat-toggle" aria-label="Toggle chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+        </button>
+        <div id="chat-window" class="chat-window" style="display:none;">
+            <div class="chat-header">
+                <h3>AI Assistant</h3>
+                <button id="chat-close" class="chat-close" aria-label="Close chat">&times;</button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-message assistant">
+                    <div class="chat-bubble">Hello! I can help you manage your todos. Just ask!</div>
+                </div>
+            </div>
+            <form id="chat-form" class="chat-input-form">
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off" />
+                <button type="button" id="chat-refresh" class="chat-refresh" aria-label="Refresh tasks" title="Refresh tasks">⟳</button>
+                <button type="submit" class="chat-send">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatWidget = document.getElementById('chat-widget');
+        const chatToggle = document.getElementById('chat-toggle');
+        const chatWindow = document.getElementById('chat-window');
+        const chatClose = document.getElementById('chat-close');
+    const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+    const chatRefresh = document.getElementById('chat-refresh');
+
+        chatToggle.addEventListener('click', () => {
+            if (chatWindow.classList.contains('show')) {
+                chatWindow.classList.remove('show');
+                setTimeout(() => {
+                    chatWindow.style.display = 'none';
+                }, 300);
+            } else {
+                chatWindow.style.display = 'flex';
+                setTimeout(() => {
+                    chatWindow.classList.add('show');
+                    chatInput.focus();
+                }, 10);
+            }
+        });
+
+        chatClose.addEventListener('click', () => {
+            chatWindow.classList.remove('show');
+            setTimeout(() => {
+                chatWindow.style.display = 'none';
+            }, 300);
+        });
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            addMessage(message, 'user');
+            chatInput.value = '';
+
+            const typingDiv = addMessage('Thinking...', 'assistant', true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                typingDiv.remove();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.response, 'assistant');
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    
+                    if (errorData?.error) {
+                        addMessage(`❌ ${errorData.message}`, 'assistant');
+                        addMessage(`💡 ${errorData.details}`, 'assistant');
+                        if (errorData.technical) {
+                            addMessage(`🔧 Technical: ${errorData.technical}`, 'assistant', false, true);
+                        }
+                    } else {
+                        addMessage(`Error: Server returned status ${response.status}`, 'assistant');
+                    }
+                }
+            } catch (error) {
+                typingDiv.remove();
+                addMessage('❌ Connection failed', 'assistant');
+                addMessage('💡 Could not reach the server. Please check your network connection.', 'assistant');
+                addMessage(`🔧 Technical: ${error.message}`, 'assistant', false, true);
+            }
+        });
+
+        function addMessage(text, role, isTyping = false, isTechnical = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${role}${isTyping ? ' typing' : ''}${isTechnical ? ' technical' : ''}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble';
+            bubble.textContent = text;
+            
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return messageDiv;
+        }
+
+        async function refreshTaskData() {
+            const container = document.querySelector('.container-card');
+            if (!container) {
+                return;
+            }
+
+            try {
+                const response = await fetch(window.location.href, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    cache: 'no-store'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Status ${response.status}`);
+                }
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContainer = doc.querySelector('.container-card');
+
+                if (newContainer) {
+                    container.replaceWith(newContainer);
+                    pendingSubmissions.clear();
+                }
+            } catch (error) {
+                console.error('Failed to refresh tasks', error);
+                addMessage('❌ Refresh failed. Please try again.', 'assistant');
+            }
+        }
+
+        if (chatRefresh) {
+            chatRefresh.addEventListener('click', async () => {
+                chatRefresh.disabled = true;
+                try {
+                    await refreshTaskData();
+                } finally {
+                    chatRefresh.disabled = false;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

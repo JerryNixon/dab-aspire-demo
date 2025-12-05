@@ -1,0 +1,179 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Azure/data-api-builder/refs/heads/main/schemas/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('ConnectionStrings__db')"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": false
+    },
+    "graphql": {
+      "enabled": false,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "mcp": {
+      "enabled": true,
+      "dml-tools": {
+        "describe-entities": true,
+        "create-record": true,
+        "read-records": true,
+        "update-record": true,
+        "delete-record": true,
+        "execute-entity": true
+      }
+    },
+    "host": {
+      "cors": null,
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
+      "mode": "development"
+    },
+    "cache": {
+      "enabled": true
+    }
+  },
+  "entities": {
+    "Todo": {
+      "description": "This table contains the list of todo items.",
+      "source": {
+        "object": "dbo.Todo",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "alias": "Id",
+          "description": "The unique identifier for a todo item.",
+          "primary-key": true
+        },
+        {
+          "name": "Title",
+          "alias": "Title",
+          "description": "The title of the todo item.",
+          "primary-key": false
+        },
+        {
+          "name": "IsCompleted",
+          "alias": "IsCompleted",
+          "description": "Indicates whether the todo item is completed.",
+          "primary-key": false
+        },
+        {
+          "name": "CategoryId",
+          "alias": "CategoryId",
+          "description": "The unique identifier for the category to which the todo item belongs.",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Todo",
+          "plural": "Todos"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "/Todo"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": ["create", "read", "update", "delete"]
+        }
+      ],
+      "cache": {
+        "enabled": false
+      }
+    },
+    "Category": {
+      "description": "This immutable table contains the list of categories for todo items.",
+      "source": {
+        "object": "dbo.Category",
+        "type": "table"
+      },
+      "fields": [
+        {
+          "name": "Id",
+          "alias": "Id",
+          "description": "The unique identifier for a category.",
+          "primary-key": true
+        },
+        {
+          "name": "Name",
+          "alias": "Name",
+          "description": "The name of the category.",
+          "primary-key": false
+        }
+      ],
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Category",
+          "plural": "Categories"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "/Category"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ],
+      "cache": {
+        "enabled": true
+      }
+    },
+    "ResetAllTodoItems": {
+      "description": "Stored procedure to reset the completion status of all todo items.",
+      "source": {
+        "object": "dbo.ResetAllTodoItems",
+        "type": "stored-procedure",
+        "parameters": [
+          {
+            "name": "isCompleted",
+            "description": "The completion status to set for all todo items.",
+            "required": false
+          }
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "ResetAllTodoItems",
+          "plural": "ResetAllTodoItems"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "/ResetAllTodoItems",
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
