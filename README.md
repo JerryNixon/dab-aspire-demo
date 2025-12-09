@@ -52,11 +52,5 @@ Recommended local sources:
 - OTLP exporter can be configured; set `OTEL_EXPORTER_OTLP_ENDPOINT` if using Aspire Dashboard.
 - DAB config bind-mount path: `api/dab-config.json`.
 
-## Cleaning leaked secrets
-If you previously committed a secret:
-- Rotate the secret at the provider (Azure AI Foundry, SQL).
-- Rewrite Git history (e.g., `git filter-repo`) to remove the value.
-- Force push after cleanup and verify with a fresh clone.
-
 ## License
 Add a license (e.g., MIT) at the root.
