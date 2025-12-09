@@ -1,43 +1,62 @@
 # Data API Builder + .NET Aspire + Razor Pages Sample
 
-A minimal sample showing how .NET Aspire composes SQL Server + Data API Builder (DAB) + a Razor Pages UI. All connection details (including the SQL connection string) are generated and injected by AppHost; you do not need to manually edit them.
+A minimal sample showing how .NET Aspire composes SQL Server + Data API Builder (DAB) + a Razor Pages UI. AppHost wires resources and injects configuration at runtime.
 
 ## What is here?
 
 Project | Purpose
 ------- | -------
-`AppHost` | Orchestrates SQL Server, Data API Builder container, and Web project with Aspire.
+`AppHost` | Orchestrates SQL Server, Data API Builder container, Redis, MCP Inspector, and the Web project with Aspire.
 `Database` | SQL project (`.sqlproj`) defining schema and seed script.
-`Web` | Razor Pages frontend consuming DAB REST endpoints.
-`api/dab-config.json` | Mounted into the DAB container (provided in repo). No manual connection string changes required.
+`Web` | Razor Pages frontend consuming DAB endpoints and Azure AI Foundry.
+`api/dab-config.json` | Mounted into the DAB container (provided in repo). No manual connection string edits required.
 
-## Quick start
-
-Prerequisites:
+## Prerequisites
 - .NET 8 SDK
 - Docker Desktop running
-- [Microsoft Foundry Local](https://learn.microsoft.com/azure/ai-foundry/foundry-local/get-started) (install with `winget install Microsoft.FoundryLocal --accept-package-agreements --accept-source-agreements`)
+- Azure AI Foundry API key (for chat)
 
-Steps:
-1. **Prime Foundry Local** (one-time per machine):
-   - Start the service if it is not already running: `foundry service start`.
-   - Download the model version AppHost expects: `foundry model download qwen2.5-0.5b-instruct-cuda-gpu:3`.
-   - Verify the cache shows alias `v3`: `foundry cache list`.
-2. Run the app: hit `F5` in VS Code or `dotnet run --project AppHost`.
-3. Aspire Workbench opens automatically—inspect resources and use the provided links.
-4. Useful endpoints once everything is up:
-   - DAB Swagger: `/swagger`
-   - GraphQL (if enabled): `/graphql`
-   - Health: `/health`
-   - Web UI: root of the web project
+## Configuration and secrets
+Do NOT hardcode secrets in source. Provide them via Aspire parameters or environment variables.
+- Parameters expected by AppHost:
+  - `sql-password` (SQL Server SA password)
+  - `azure-aifoundry-apikey` (Azure AI Foundry key)
+- Web reads environment variables:
+  - `ConnectionStrings__chat__Endpoint`
+  - `ConnectionStrings__chat__Deployment`
+  - `ConnectionStrings__chat__ApiVersion`
+  - `ConnectionStrings__chat__Key`
 
-> ℹ️ AppHost pins the language model deployment to `qwen2.5-0.5b` version **3**. If you accidentally cancel a download, delete the `download.tmp` in `~/.foundry/cache/models/Microsoft/qwen2.5-0.5b-instruct-cuda-gpu-3/` and run `foundry service restart` to make Foundry re-index the cache.
+Recommended local sources:
+- `dotnet user-secrets` for the `Web` project
+- Environment variables
+- CI/host secret store (e.g., GitHub Actions secrets)
 
-## Data access pattern
-The Web project uses repositories (`TodoRepository`, `CategoryRepository`) that talk to DAB via `TableRepository<T>` instances produced by `DabRepositoryFactory`. Environment variables (e.g. `services__dab__http__0`) supplied by Aspire give the DAB base URL at runtime.
+## Quick start
+1. Restore and build:
+   - `dotnet restore`
+   - `dotnet build`
+2. Run the Aspire host:
+   - `dotnet run --project AppHost`
+3. When prompted or via env vars, provide:
+   - `ASPIRE_PARAMETER_sql-password`
+   - `ASPIRE_PARAMETER_azure-aifoundry-apikey`
+4. Open the Aspire Workbench links:
+   - Web UI: `web-app`
+   - DAB: `/swagger`, `/graphql`, `/health`
+   - Redis Commander (optional): root
+   - MCP Inspector (developer tool)
 
-## UI
-`Pages/Index.cshtml` shows pending vs. completed items. A checkbox toggles completion; icon links handle edit/delete with minimal chrome. `/health` is exposed for quick container readiness checks.
+## Notes
+- SQL data volume is optional and can be enabled in `AppHost/AppHost.cs`.
+- OTLP exporter can be configured; set `OTEL_EXPORTER_OTLP_ENDPOINT` if using Aspire Dashboard.
+- DAB config bind-mount path: `api/dab-config.json`.
+
+## Cleaning leaked secrets
+If you previously committed a secret:
+- Rotate the secret at the provider (Azure AI Foundry, SQL).
+- Rewrite Git history (e.g., `git filter-repo`) to remove the value.
+- Force push after cleanup and verify with a fresh clone.
 
 ## License
-Add a license of your choice (e.g. MIT) at the root.
+Add a license (e.g., MIT) at the root.
