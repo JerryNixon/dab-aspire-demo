@@ -16,22 +16,6 @@ Project | Purpose
 - Docker Desktop running
 - Azure AI Foundry API key (for chat)
 
-## Configuration and secrets
-Do NOT hardcode secrets in source. Provide them via Aspire parameters or environment variables.
-- Parameters expected by AppHost:
-  - `sql-password` (SQL Server SA password)
-  - `azure-aifoundry-apikey` (Azure AI Foundry key)
-- Web reads environment variables:
-  - `ConnectionStrings__chat__Endpoint`
-  - `ConnectionStrings__chat__Deployment`
-  - `ConnectionStrings__chat__ApiVersion`
-  - `ConnectionStrings__chat__Key`
-
-Recommended local sources:
-- `dotnet user-secrets` for the `Web` project
-- Environment variables
-- CI/host secret store (e.g., GitHub Actions secrets)
-
 ## Quick start
 1. Restore and build:
    - `dotnet restore`
